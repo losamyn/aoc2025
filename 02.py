@@ -15,10 +15,16 @@ part2_asserts = [
 ]
 
 
-def part1_is_invalid_id(product_id: int) -> bool:
+def part1_is_invalid_id_old(product_id: int) -> bool:
     product_id = str(product_id)
     halfway = len(product_id) // 2
     return product_id[:halfway] == product_id[halfway:]
+
+
+def part1_is_invalid_id(product_id: int) -> bool:
+    # Maths approach seems about as fast as string approach
+    length = len(str(product_id))
+    return length % 2 == 0 and product_id % (10 ** (length // 2) + 1) == 0
 
 
 def part1(inp: str) -> int:
@@ -49,6 +55,23 @@ def part2_is_invalid_id(product_id: int) -> bool:
                 return True
             to_check = to_check[possible_length:]
         possible_length = product_id.find(product_id[0], possible_length + 1)
+
+    return False
+
+
+def part2_is_invalid_id_new(product_id: int) -> bool:
+    # Maths approach seems slower than string approach
+    length = len(str(product_id))
+
+    for i in range(length // 2, 0, -1):
+        if length % i != 0:
+            continue
+        div = 1
+        multi = 10**i
+        for i in range(length // i - 1):
+            div = div * multi + 1
+        if product_id % div == 0:
+            return True
 
     return False
 
