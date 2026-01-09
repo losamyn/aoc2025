@@ -76,7 +76,7 @@ def part2_is_invalid_id_new(product_id: int) -> bool:
     return False
 
 
-def part2(inp: str) -> str | int | None:
+def part2(inp: str) -> int:
     invalid_ids = []
 
     for range_ in inp.split(","):
