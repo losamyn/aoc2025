@@ -46,7 +46,7 @@ def part1(inp: str) -> int:
 
 
 def part2(inp: str) -> int:
-    inp = inp.replace(".", "0").replace("S", "1")
+    inp = inp.strip().replace(".", "0").replace("S", "1")
     lines = [list(line) for line in inp.split("\n")]
     lines = [[-1 if c == "^" else int(c) for c in line] for line in lines]
 
@@ -58,4 +58,5 @@ def part2(inp: str) -> int:
                     lines[i][j + 1] += lines[i - 1][j]
                 else:
                     lines[i][j] += lines[i - 1][j]
+
     return sum(lines[-1])
