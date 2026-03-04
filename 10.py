@@ -58,55 +58,81 @@ def calculate_steps(goal, buttons):
     return 0
 
 
+def compute_lookup_table(buttons, state_length):
+    # Constructs a dictionary mapping the patterns created to all possible button combinations
+    # Binary representation of key represents which joltage is odd in final stage
+    # Iterate in a gray code pattern, visiting all possible combinations by having to only push 1 button at a time
+    state = [False] * state_length
+    button_combination = set()
+    i_last = 0
+    result = {tuple(state): [tuple(button_combination)]}
+    for i in range(1, 1 << len(buttons)):
+        # Calculate Gray Code number, representing next button combination
+        i_gray = i ^ (i >> 1)
+        # Find next button to press from old state
+        diff = i_gray ^ i_last
+        i_last = i_gray
+        to_press = 0
+        while not diff & 1:
+            to_press += 1
+            diff >>= 1
+        # Update button combination
+        if to_press in button_combination:
+            button_combination.remove(to_press)
+        else:
+            button_combination.add(to_press)
+        # Press the button
+        for index in buttons[to_press]:
+            state[index] = not state[index]
+        # Add button combination to the resulting state
+        s = tuple(state)
+        if s in result:
+            result[s].append(tuple(button_combination))
+        else:
+            result[s] = [tuple(button_combination)]
+    return result
+
+
+def iterate_part_two(
+    goal: list[int], buttons: list[tuple[int, ...]], lookup_table, level=0
+) -> list[int]:
+    # Returns a list with all possible button press amounts
+    # Calculate even/odd pattern for current goal
+    pattern = tuple(i & 1 for i in goal)
+    # Lookup the pattern to find possible button presses resulting in this pattern
+    if pattern not in lookup_table:
+        # Pattern not possible
+        return []
+    combinations = lookup_table[pattern]
+    results = []
+    for combo in combinations:
+        # Press the buttons in the combo
+        new_goal = list(goal)
+        for button_index in combo:
+            for index in buttons[button_index]:
+                new_goal[index] -= 1
+        # Special cases:
+        if any(joltage < 0 for joltage in new_goal):
+            # Not a valid outcome, we exceeded at least one of the joltages
+            continue
+        if not any(new_goal):
+            # new_goal is all zeroes, we found a possible solution
+            results.append(len(combo))
+            continue
+        # Next iteration:
+        half_goal = [joltage // 2 for joltage in new_goal]
+        half_results = iterate_part_two(half_goal, buttons, lookup_table, level + 1)
+        for half_result in half_results:
+            results.append(len(combo) + (2 * half_result))
+    return results
+
+
 def calculate_steps_two(goal, buttons):
     # Could not figure this one out myself, using the approach described in following post:
     # https://old.reddit.com/r/adventofcode/comments/1pk87hl/2025_day_10_part_2_bifurcate_your_way_to_victory
-    aug_matrix = [
-        [int(row in button) for button in buttons] + [joltage]
-        for row, joltage in enumerate(goal)
-    ]
-    rows_n = len(aug_matrix)
-    columns_n = len(aug_matrix[0])
-    # RREF -- making the assumption that all divisions will be whole integers
-    for current_row in range(rows_n):
-        # Find next non-zero row, swap it to current row
-        current_column = columns_n
-        to_swap = current_row
-        for row_i in range(current_row, rows_n):
-            first_one = next((i for i, x in enumerate(aug_matrix[row_i]) if x), None)
-            if first_one is not None and first_one < current_column:
-                current_column = first_one
-                to_swap = row_i
-            if current_column == current_row:
-                break
-        if current_column == columns_n:
-            break
-        if to_swap != current_row:
-            # Swap rows
-            tmp = aug_matrix[to_swap]
-            aug_matrix[to_swap] = aug_matrix[current_row]
-            aug_matrix[current_row] = tmp
-        # Scale current row
-        scale = aug_matrix[current_row][current_column]
-        for i in range(current_column, columns_n):
-            if aug_matrix[current_row][i] % scale:
-                print(
-                    "RREF warning: cant divide ",
-                    aug_matrix[current_row][i],
-                    " by ",
-                    scale,
-                    " --- ",
-                    goal,
-                )
-            aug_matrix[current_row][i] = aug_matrix[current_row][i] / scale
-        # Subtract current row from other rows
-        for i in range(rows_n):
-            scale = aug_matrix[i][current_column]
-            if i == current_row or scale == 0:
-                continue
-            for j in range(current_column, columns_n):
-                aug_matrix[i][j] -= aug_matrix[current_row][j] * scale
-    return int(sum([row[-1] for row in aug_matrix]))
+    lookup_table = compute_lookup_table(buttons, len(goal))
+    results = iterate_part_two(goal, buttons, lookup_table)
+    return min(results)
 
 
 def part1(inp: str) -> int:
