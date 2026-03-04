@@ -95,14 +95,14 @@ def compute_lookup_table(buttons, state_length):
 
 def iterate_part_two(
     goal: list[int], buttons: list[tuple[int, ...]], lookup_table, level=0
-) -> list[int]:
+) -> int | None:
     # Returns a list with all possible button press amounts
     # Calculate even/odd pattern for current goal
     pattern = tuple(i & 1 for i in goal)
     # Lookup the pattern to find possible button presses resulting in this pattern
     if pattern not in lookup_table:
         # Pattern not possible
-        return []
+        return None
     combinations = lookup_table[pattern]
     results = []
     for combo in combinations:
@@ -121,18 +121,21 @@ def iterate_part_two(
             continue
         # Next iteration:
         half_goal = [joltage // 2 for joltage in new_goal]
-        half_results = iterate_part_two(half_goal, buttons, lookup_table, level + 1)
-        for half_result in half_results:
+        half_result = iterate_part_two(half_goal, buttons, lookup_table, level + 1)
+        if half_result:
             results.append(len(combo) + (2 * half_result))
-    return results
+    if results:
+        return min(results)
+    else:
+        return None
 
 
 def calculate_steps_two(goal, buttons):
     # Could not figure this one out myself, using the approach described in following post:
     # https://old.reddit.com/r/adventofcode/comments/1pk87hl/2025_day_10_part_2_bifurcate_your_way_to_victory
     lookup_table = compute_lookup_table(buttons, len(goal))
-    results = iterate_part_two(goal, buttons, lookup_table)
-    return min(results)
+    result = iterate_part_two(goal, buttons, lookup_table)
+    return result
 
 
 def part1(inp: str) -> int:
@@ -147,5 +150,7 @@ def part2(inp: str) -> int:
     result = 0
     for line in inp.strip().split("\n"):
         _, buttons, goal = parse_line(line)
-        result += calculate_steps_two(goal, buttons)
+        subresult = calculate_steps_two(goal, buttons)
+        if subresult:
+            result += subresult
     return result
